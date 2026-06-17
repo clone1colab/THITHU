@@ -40,7 +40,9 @@ import {
   syncClearQuestions, 
   syncSeedQuestions, 
   syncSeedSubmissions, 
-  syncUpdateSettings 
+  syncUpdateSettings,
+  handleFirestoreError,
+  OperationType
 } from './firebase';
 
 export default function App() {
@@ -70,7 +72,7 @@ export default function App() {
         });
       }
     }, (err) => {
-      console.error("Error subscribing to questions state:", err);
+      handleFirestoreError(err, OperationType.GET, 'questions');
     });
 
     // 2. Subscribe to Submissions
@@ -85,7 +87,7 @@ export default function App() {
       setSubmissions(list);
       saveSubmissions(list);
     }, (err) => {
-      console.error("Error subscribing to submissions state:", err);
+      handleFirestoreError(err, OperationType.GET, 'submissions');
     });
 
     // 3. Subscribe to SettingsDoc
@@ -110,7 +112,7 @@ export default function App() {
         });
       }
     }, (err) => {
-      console.error("Error subscribing to settings doc:", err);
+      handleFirestoreError(err, OperationType.GET, 'settings/global');
     });
 
     return () => {
