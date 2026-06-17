@@ -20,7 +20,9 @@ import {
   Check, 
   X,
   RefreshCw,
-  LogOut
+  LogOut,
+  Trophy,
+  Award
 } from 'lucide-react';
 import { Question, QuestionType, CandidateResponse, CandidateSubmission, SystemSettings } from '../types';
 import { calculateQuestionScore } from '../utils';
@@ -370,38 +372,73 @@ export default function CandidateSection({
                           className="pt-3 border-t border-white/[0.06] overflow-hidden"
                         >
                           {lookupResult ? (
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between p-3 rounded-xl bg-[#030712]/40 border border-white/5">
-                                <div>
-                                  <p className="text-slate-400 text-[10px] mb-0.5">Thí sinh:</p>
-                                  <p className="text-white font-bold text-xs leading-tight">{lookupResult.zaloName}</p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-indigo-400 text-[10px] mb-0.5">Điểm tổng:</p>
-                                  <p className="text-sm font-bold text-indigo-300 font-mono">{lookupResult.score.toFixed(2)}</p>
-                                </div>
-                              </div>
+                            (() => {
+                              const sortedSubmissions = [...submissions].sort((a, b) => {
+                                if (Math.abs(a.score - b.score) > 0.0001) {
+                                  return b.score - a.score;
+                                }
+                                return new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
+                              });
+                              const rankIndex = sortedSubmissions.findIndex(s => s.email.toLowerCase() === lookupResult.email.toLowerCase());
+                              const rank = rankIndex !== -1 ? rankIndex + 1 : null;
+                              const totalCount = sortedSubmissions.length;
+                              const isTop5 = rank !== null && rank >= 1 && rank <= 5;
 
-                              {/* Question Details inside scorecard lookup */}
-                              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                {lookupResult.breakdown.map((item, idx) => (
-                                  <div key={idx} className="p-2.5 bg-[#030712]/10 rounded-lg border border-white/[0.04] text-[11px] space-y-1 text-left">
-                                    <div className="flex items-center justify-between mb-0.5">
-                                      <span className="font-bold text-slate-300">Câu số {idx + 1}</span>
-                                      <span className={`px-1.5 py-0.5 rounded font-bold font-mono text-[9px] border ${item.pointsEarned > 0 ? 'bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/10' : 'bg-rose-500/[0.08] text-rose-400 border-rose-500/10'}`}>
-                                        +{item.pointsEarned.toFixed(2)} / {item.maxPoints.toFixed(2)} đ
-                                      </span>
+                              return (
+                                <div className="space-y-3">
+                                  {isTop5 && (
+                                    <div className="bg-amber-500/[0.08] border border-amber-500/20 rounded-xl p-3 flex items-center gap-2.5 text-amber-300 text-left animate-pulse">
+                                      <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
+                                      <div>
+                                        <p className="text-[11px] font-bold">Chúc mừng! Bạn đạt Top {rank} xuất sắc 🌟</p>
+                                        <p className="text-[9.5px] text-amber-200/70 leading-relaxed font-sans mt-0.5">
+                                          Thành tích lọt vào top dẫn đầu kỳ thi của bạn vô cùng tuyệt vời! 🎉
+                                        </p>
+                                      </div>
                                     </div>
-                                    <p className="text-slate-400 font-mono text-[10px] leading-relaxed">
-                                      Trả lời: <span className="text-slate-200">{item.candidateAnswerDetail}</span>
-                                    </p>
-                                    <p className="text-slate-400 font-mono text-[10px] leading-relaxed">
-                                      Đáp án: <span className="text-emerald-400">{item.correctAnswerDetail}</span>
-                                    </p>
+                                  )}
+
+                                  <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-[#030712]/40 border border-white/5 items-center">
+                                    <div className="text-left overflow-hidden">
+                                      <p className="text-slate-500 text-[9px] mb-0.5 uppercase tracking-wide">Thí sinh</p>
+                                      <p className="text-white font-bold text-xs truncate leading-tight" title={lookupResult.zaloName}>
+                                        {lookupResult.zaloName}
+                                      </p>
+                                    </div>
+                                    <div className="border-x border-white/5 px-2 text-center">
+                                      <p className="text-pink-400 text-[9px] mb-0.5 uppercase tracking-wide">Xếp hạng</p>
+                                      <p className="text-xs font-bold text-white font-mono">
+                                        #{rank} <span className="text-slate-500 font-sans font-normal text-[10px]">/ {totalCount}</span>
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-indigo-400 text-[9px] mb-0.5 uppercase tracking-wide">Điểm tổng</p>
+                                      <p className="text-xs font-bold text-indigo-300 font-mono">{lookupResult.score.toFixed(2)}</p>
+                                    </div>
                                   </div>
-                                ))}
-                              </div>
-                            </div>
+
+                                  {/* Question Details inside scorecard lookup */}
+                                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                    {lookupResult.breakdown.map((item, idx) => (
+                                      <div key={idx} className="p-2.5 bg-[#030712]/10 rounded-lg border border-white/[0.04] text-[11px] space-y-1 text-left">
+                                        <div className="flex items-center justify-between mb-0.5">
+                                          <span className="font-bold text-slate-300">Câu số {idx + 1}</span>
+                                          <span className={`px-1.5 py-0.5 rounded font-bold font-mono text-[9px] border ${item.pointsEarned > 0 ? 'bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/10' : 'bg-rose-500/[0.08] text-rose-400 border-rose-500/10'}`}>
+                                            +{item.pointsEarned.toFixed(2)} / {item.maxPoints.toFixed(2)} đ
+                                          </span>
+                                        </div>
+                                        <p className="text-slate-400 font-mono text-[10px] leading-relaxed">
+                                          Trả lời: <span className="text-slate-200">{item.candidateAnswerDetail}</span>
+                                        </p>
+                                        <p className="text-slate-400 font-mono text-[10px] leading-relaxed">
+                                          Đáp án: <span className="text-emerald-400">{item.correctAnswerDetail}</span>
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()
                           ) : (
                             <div className="text-center py-3 text-slate-500 text-xs bg-[#030712]/20 rounded-xl border border-white/[0.06]">
                               Không tìm thấy kết quả thi với email này. Vui lòng kiểm tra lại!
