@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   BookOpen, 
@@ -28,67 +28,155 @@ import {
 import { INITIAL_QUESTIONS, INITIAL_SUBMISSIONS } from './data';
 import CandidateSection from './components/CandidateSection';
 import AdminSection from './components/AdminSection';
+import { onSnapshot } from 'firebase/firestore';
+import { 
+  questionsCol, 
+  submissionsCol, 
+  settingsDoc, 
+  syncSaveQuestion, 
+  syncDeleteQuestion, 
+  syncAddSubmission, 
+  syncClearSubmissions, 
+  syncClearQuestions, 
+  syncSeedQuestions, 
+  syncSeedSubmissions, 
+  syncUpdateSettings 
+} from './firebase';
 
 export default function App() {
-  // State from localStorage persistence
+  // State from localStorage persistence / fallback
   const [questions, setQuestions] = useState<Question[]>(() => loadQuestions());
   const [submissions, setSubmissions] = useState<CandidateSubmission[]>(() => loadSubmissions());
   const [isScoresPublic, setIsScoresPublic] = useState<boolean>(() => loadScoresPublic());
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(() => loadSystemSettings());
 
+  // Subscribe to real-time updates from Firestore on mount
+  useEffect(() => {
+    // 1. Subscribe to Questions
+    const unsubscribeQuestions = onSnapshot(questionsCol, (snapshot) => {
+      const list: Question[] = [];
+      snapshot.forEach((doc) => {
+        list.push(doc.data());
+      });
+      // Sort alphabetically/chronologically by ID or createdAt
+      list.sort((a, b) => a.id.localeCompare(b.id));
+      if (list.length > 0) {
+        setQuestions(list);
+        saveQuestions(list);
+      } else {
+        // If Firestore is completely empty on first launch, auto-seed default questions
+        syncSeedQuestions(INITIAL_QUESTIONS).catch(err => {
+          console.error("Failed to seed default questions to firestore:", err);
+        });
+      }
+    }, (err) => {
+      console.error("Error subscribing to questions state:", err);
+    });
+
+    // 2. Subscribe to Submissions
+    const unsubscribeSubmissions = onSnapshot(submissionsCol, (snapshot) => {
+      const list: CandidateSubmission[] = [];
+      snapshot.forEach((doc) => {
+        list.push(doc.data());
+      });
+      // Sort by submission date descending (newest first)
+      list.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      
+      setSubmissions(list);
+      saveSubmissions(list);
+    }, (err) => {
+      console.error("Error subscribing to submissions state:", err);
+    });
+
+    // 3. Subscribe to SettingsDoc
+    const unsubscribeSettings = onSnapshot(settingsDoc, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data.isScoresPublic !== undefined) {
+          setIsScoresPublic(data.isScoresPublic);
+          saveScoresPublic(data.isScoresPublic);
+        }
+        if (data.systemSettings !== undefined) {
+          setSystemSettings(data.systemSettings);
+          saveSystemSettings(data.systemSettings);
+        }
+      } else {
+        // Doc settings/global doesn't exist yet, seed initial values
+        syncUpdateSettings(false, {
+          examDurationMinutes: 30,
+          isExamClosed: false
+        }).catch(err => {
+          console.error("Failed to seed initial settings in Firestore:", err);
+        });
+      }
+    }, (err) => {
+      console.error("Error subscribing to settings doc:", err);
+    });
+
+    return () => {
+      unsubscribeQuestions();
+      unsubscribeSubmissions();
+      unsubscribeSettings();
+    };
+  }, []);
+
   // Navigation tab: 'candidate' | 'admin'
   const [activeTab, setActiveTab] = useState<'candidate' | 'admin'>('candidate');
 
-  // Question CRUD handlers
+  // Question CRUD handlers (using async Firestore updates)
   const handleAddQuestion = (newQ: Question) => {
-    setQuestions(prev => {
-      const updated = [...prev, newQ];
-      saveQuestions(updated);
-      return updated;
+    syncSaveQuestion(newQ).catch(err => {
+      console.error("Error adding question:", err);
     });
   };
 
   const handleEditQuestion = (editedQ: Question) => {
-    setQuestions(prev => {
-      const updated = prev.map(q => q.id === editedQ.id ? editedQ : q);
-      saveQuestions(updated);
-      return updated;
+    syncSaveQuestion(editedQ).catch(err => {
+      console.error("Error updating question:", err);
     });
   };
 
   const handleDeleteQuestion = (id: string) => {
-    setQuestions(prev => {
-      const updated = prev.filter(q => q.id !== id);
-      saveQuestions(updated);
-      return updated;
+    syncDeleteQuestion(id).catch(err => {
+      console.error("Error deleting question:", err);
     });
   };
 
   const handleToggleScoresPublic = (val: boolean) => {
-    setIsScoresPublic(val);
-    saveScoresPublic(val);
+    syncUpdateSettings(val, systemSettings).catch(err => {
+      console.error("Error toggling public scores:", err);
+    });
   };
 
   const handleClearSubmissions = () => {
-    setSubmissions([]);
-    saveSubmissions([]);
+    syncClearSubmissions().catch(err => {
+      console.error("Error clearing submissions:", err);
+    });
   };
 
   const handleClearQuestions = () => {
-    setQuestions([]);
-    saveQuestions([]);
+    syncClearQuestions().catch(err => {
+      console.error("Error clearing questions:", err);
+    });
   };
 
   const handleLoadMockData = () => {
-    setQuestions(INITIAL_QUESTIONS);
-    saveQuestions(INITIAL_QUESTIONS);
-    setSubmissions(INITIAL_SUBMISSIONS);
-    saveSubmissions(INITIAL_SUBMISSIONS);
+    setIsScoresPublic(true);
+    syncSeedQuestions(INITIAL_QUESTIONS)
+      .then(() => syncSeedSubmissions(INITIAL_SUBMISSIONS))
+      .then(() => syncUpdateSettings(true, {
+        examDurationMinutes: 30,
+        isExamClosed: false
+      }))
+      .catch(err => {
+        console.error("Error loading mock data to Firestore:", err);
+      });
   };
 
   const handleUpdateSystemSettings = (newSettings: SystemSettings) => {
-    setSystemSettings(newSettings);
-    saveSystemSettings(newSettings);
+    syncUpdateSettings(isScoresPublic, newSettings).catch(err => {
+      console.error("Error updating system settings:", err);
+    });
   };
 
   // Exam Grading Engine on submit
@@ -124,10 +212,8 @@ export default function App() {
       breakdown: finalBreakdown
     };
 
-    setSubmissions(prev => {
-      const updated = [newSubmission, ...prev];
-      saveSubmissions(updated);
-      return updated;
+    syncAddSubmission(newSubmission).catch(err => {
+      console.error("Error recording submission:", err);
     });
   };
 
