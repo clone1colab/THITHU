@@ -1,0 +1,6 @@
+{
+  "name": "Exam Practice Website",
+  "description": "A feature-rich exam practice application featuring a interactive candidate quiz interface and an administrator dashboard with analytics, live grading, score release toggles, and multi-format question editor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
