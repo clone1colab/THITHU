@@ -330,7 +330,7 @@ export default function AdminSection({
             <div className="text-center">
               <h2 className="text-xl font-bold text-white">Bảo mật Hệ thống Admin</h2>
               <p className="text-slate-400 text-xs mt-1.5 px-4 leading-relaxed">
-                Vui lòng nhập mã bảo mật PIN để truy cập giao diện quản trị đề thi và bảng kiểm định điểm số. (Gợi ý: 2512)
+                Vui lòng nhập mã bảo mật PIN để truy cập giao diện quản trị đề thi và bảng kiểm định điểm số.
               </p>
             </div>
 
