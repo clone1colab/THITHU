@@ -390,6 +390,35 @@ export default function AdminSection({
               </div>
 
               <div className="flex flex-wrap items-center gap-4">
+                {/* Exam lock/unlock toggle */}
+                <div className="flex items-center gap-3 bg-white/[0.02] px-4 py-2.5 rounded-xl border border-white/[0.08]">
+                  <div className="text-left">
+                    <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 block">Trạng thái Đề thi (Exam Lock)</span>
+                    <span className={`text-xs font-bold font-mono ${systemSettings.isExamClosed ? 'text-rose-400' : 'text-emerald-400'}`}>
+                      {systemSettings.isExamClosed ? 'Đã đóng (CLOSED)' : 'Đang mở (ACTIVE)'}
+                    </span>
+                  </div>
+                  <button 
+                    id="btn-toggle-exam-status-header"
+                    onClick={() => {
+                      const updatedValue = !systemSettings.isExamClosed;
+                      onUpdateSystemSettings({
+                        ...systemSettings,
+                        isExamClosed: updatedValue
+                      });
+                      setIsClosedInput(updatedValue);
+                      showToast(updatedValue ? 'Đã khóa/đóng đề thi hoàn toàn!' : 'Đã mở đề thi thành công!', 'success');
+                    }}
+                    className={`ml-2 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all duration-200 ${
+                      systemSettings.isExamClosed 
+                        ? 'bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] text-emerald-400 border border-emerald-500/20' 
+                        : 'bg-rose-500/[0.08] hover:bg-rose-500/[0.15] text-rose-400 border border-rose-500/20'
+                    }`}
+                  >
+                    {systemSettings.isExamClosed ? 'Mở đề thi' : 'Đóng đề thi'}
+                  </button>
+                </div>
+
                 {/* Score release status indicator */}
                 <div className="flex items-center gap-3 bg-white/[0.02] px-4 py-2.5 rounded-xl border border-white/[0.08]">
                   <div className="text-left">
@@ -530,15 +559,18 @@ export default function AdminSection({
                     <div>
                       <label className="block text-slate-300 text-xs font-medium mb-1.5 flex items-center gap-2">
                         <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
-                        URL Hình ảnh / Banner (không bắt buộc):
+                        URL Hình ảnh trực tiếp / Banner:
                       </label>
                       <input 
                         type="url"
-                        placeholder="https://example.com/banner-cong-dong.png"
+                        placeholder="https://i.postimg.cc/TPqZ0YDC/z7933678389046-9cdb76a7f3fb003d31e5f668d3e47332.jpg"
                         value={imageUrlInput}
                         onChange={(e) => setImageUrlInput(e.target.value)}
                         className="w-full bg-[#030712]/50 border border-white/10 rounded-xl px-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-sky-500/50 text-xs transition-all"
                       />
+                      <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                        * Nhập link ảnh trực tiếp (Direct Link) từ nơi lưu trữ ngoài (như postimg, imgur, kết thúc bằng file .jpg, .png).
+                      </p>
                     </div>
 
                     <div>
@@ -1066,17 +1098,20 @@ export default function AdminSection({
                 {/* Common Fields: Image URL Optional */}
                 <div>
                   <label className="block text-slate-300 text-xs font-mono uppercase tracking-wider mb-2 flex items-center justify-between">
-                    <span>Liên kết hình ảnh minh họa (Image URL - Unsplash hoặc CDN)</span>
-                    <span className="text-[10px] text-slate-500 font-normal">Tùy chọn</span>
+                    <span>Liên kết hình ảnh minh họa (Image URL)</span>
+                    <span className="text-[10px] text-indigo-400 font-normal">Chỉ nhận link ảnh trực tiếp (vd: .jpg, .png)</span>
                   </label>
                   <input
                     id="input-q-image"
                     type="url"
-                    placeholder="https://images.unsplash.com/... hoặc để trống"
+                    placeholder="https://i.postimg.cc/TPqZ0YDC/z7933678389046-9cdb76a7f3fb003d31e5f668d3e47332.jpg"
                     value={formImageUrl}
                     onChange={(e) => setFormImageUrl(e.target.value)}
                     className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-xs transition-all duration-200"
                   />
+                  <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                    * Lưu ý: Hãy lấy "Link trực tiếp" (Direct Link) từ dịch vụ lưu trữ ảnh (như PostImage, Imgur) để ảnh hiển thị chính xác.
+                  </p>
                 </div>
 
                 {/* CONDITIONAL SUB-FORM: MULTIPLE CHOICE */}

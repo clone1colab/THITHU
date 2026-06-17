@@ -84,6 +84,20 @@ export default function CandidateSection({
     setResponses(initialResponses);
   }, [questions]);
 
+  // Reset candidate's session/email and return to welcome phase when submissions are deleted/cleared by Admin
+  useEffect(() => {
+    if (submissions.length === 0) {
+      setEmail('');
+      setZaloName('');
+      setEmailError('');
+      setZaloError('');
+      setLookupEmail('');
+      setLookupResult(null);
+      setLookupSearched(false);
+      setGameState('welcome');
+    }
+  }, [submissions]);
+
   // Handle timer countdown
   useEffect(() => {
     if (timerActive && timeLeft > 0) {
@@ -282,7 +296,7 @@ export default function CandidateSection({
             className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:items-stretch"
           >
             {/* Info and features panel */}
-            <div className="lg:col-span-7 flex flex-col justify-between bg-white/[0.03] backdrop-blur-2xl rounded-3xl p-8 md:p-12 border border-white/10 shadow-2xl text-slate-100 ReadyContainer transition-all duration-300 hover:border-white/[0.15]">
+            <div className="lg:col-span-8 flex flex-col justify-between bg-white/[0.03] backdrop-blur-2xl rounded-3xl p-8 md:p-12 border border-white/10 shadow-2xl text-slate-100 ReadyContainer transition-all duration-300 hover:border-white/[0.15]">
               <div>
                 <span className="px-4 py-1.5 rounded-full bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-400 font-medium text-xs tracking-wider uppercase inline-block mb-6">
                   Hệ thống Luyện thi Chất lượng cao
@@ -295,7 +309,7 @@ export default function CandidateSection({
                 </p>
 
                 {/* Question format explanation cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                   <div className="bg-white/[0.02] backdrop-blur-md p-4 rounded-2xl border border-white/5 hover:border-emerald-500/20 hover:bg-white/[0.04] transition-all duration-300 shadow-lg">
                     <span className="text-emerald-400 text-xs font-mono font-bold block mb-1">DẠNG 1</span>
                     <span className="text-slate-200 text-sm font-semibold block mb-1">Trắc Nghiệm MCQs</span>
@@ -312,6 +326,104 @@ export default function CandidateSection({
                     <span className="text-slate-400 text-xs">Tự viết đáp án chuẩn xác theo format kỳ thi đại học.</span>
                   </div>
                 </div>
+
+                {/* Score Lookup Section, moved to fill the empty space here */}
+                {isScoresPublic ? (
+                  <div className="bg-indigo-500/[0.04] border border-indigo-500/15 rounded-2xl p-5 shadow-lg space-y-3 mt-6 mb-6 text-left">
+                    <h3 className="text-xs font-bold text-indigo-400 tracking-wider uppercase flex items-center gap-2">
+                      <Search className="w-3.5 h-3.5" />
+                      CỔNG TRA CỨU KẾT QUẢ THI CÔNG KHAI
+                    </h3>
+                    <p className="text-slate-400 text-[11px] font-sans">
+                      Ban tổ chức đã công bố điểm thi chính thức. Nhập email đăng ký của bạn để xem điểm chi tiết &amp; đáp án.
+                    </p>
+
+                    <form onSubmit={handleLookupScore} className="space-y-3">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
+                          <input 
+                            id="lookup-email-input"
+                            type="email"
+                            placeholder="Nhập email đã đăng ký thi..."
+                            value={lookupEmail}
+                            onChange={(e) => setLookupEmail(e.target.value)}
+                            className="w-full bg-[#030712]/50 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 text-xs transition-all"
+                          />
+                        </div>
+                        <button 
+                          id="btn-lookup-search"
+                          type="submit"
+                          className="bg-indigo-600 hover:bg-indigo-700 hover:border-indigo-500/50 border border-indigo-600 transition-all duration-300 text-white font-semibold px-4 py-2 rounded-xl text-xs cursor-pointer flex items-center gap-1.5 shadow-lg shadow-indigo-600/20"
+                        >
+                          Tra cứu
+                        </button>
+                      </div>
+                    </form>
+
+                    <AnimatePresence>
+                      {lookupSearched && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="pt-3 border-t border-white/[0.06] overflow-hidden"
+                        >
+                          {lookupResult ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between p-3 rounded-xl bg-[#030712]/40 border border-white/5">
+                                <div>
+                                  <p className="text-slate-400 text-[10px] mb-0.5">Thí sinh:</p>
+                                  <p className="text-white font-bold text-xs leading-tight">{lookupResult.zaloName}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-indigo-400 text-[10px] mb-0.5">Điểm tổng:</p>
+                                  <p className="text-sm font-bold text-indigo-300 font-mono">{lookupResult.score.toFixed(2)}</p>
+                                </div>
+                              </div>
+
+                              {/* Question Details inside scorecard lookup */}
+                              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                {lookupResult.breakdown.map((item, idx) => (
+                                  <div key={idx} className="p-2.5 bg-[#030712]/10 rounded-lg border border-white/[0.04] text-[11px] space-y-1 text-left">
+                                    <div className="flex items-center justify-between mb-0.5">
+                                      <span className="font-bold text-slate-300">Câu số {idx + 1}</span>
+                                      <span className={`px-1.5 py-0.5 rounded font-bold font-mono text-[9px] border ${item.pointsEarned > 0 ? 'bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/10' : 'bg-rose-500/[0.08] text-rose-400 border-rose-500/10'}`}>
+                                        +{item.pointsEarned.toFixed(2)} / {item.maxPoints.toFixed(2)} đ
+                                      </span>
+                                    </div>
+                                    <p className="text-slate-400 font-mono text-[10px] leading-relaxed">
+                                      Trả lời: <span className="text-slate-200">{item.candidateAnswerDetail}</span>
+                                    </p>
+                                    <p className="text-slate-400 font-mono text-[10px] leading-relaxed">
+                                      Đáp án: <span className="text-emerald-400">{item.correctAnswerDetail}</span>
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-3 text-slate-500 text-xs bg-[#030712]/20 rounded-xl border border-white/[0.06]">
+                              Không tìm thấy kết quả thi với email này. Vui lòng kiểm tra lại!
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <div className="bg-slate-500/[0.03] border border-slate-500/10 rounded-2xl p-5 mt-6 mb-6 text-left flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-500/[0.08] flex items-center justify-center shrink-0">
+                      <Search className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide">Cổng tra cứu kết quả thi</h4>
+                      <p className="text-slate-400 text-[10.5px] leading-relaxed mt-1">
+                        Cổng tra cứu công khai đang tạm đóng. Ban tổ chức sẽ mở cổng tra cứu điểm và đáp án chi tiết ngay sau khi đợt thi kết thúc!
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-6 border-t border-white/[0.06] pt-6">
@@ -422,89 +534,52 @@ export default function CandidateSection({
                 )}
               </div>
 
-              {/* Score Lookup Section, visible conditionally */}
-              {isScoresPublic && (
-                <div className="bg-white/[0.03] backdrop-blur-2xl rounded-3xl p-6 border border-white/10 shadow-2xl hover:border-white/[0.15] transition-all duration-300">
-                  <h3 className="text-sm font-bold text-indigo-400 tracking-wider uppercase mb-3 flex items-center gap-2">
-                    <Search className="w-4 h-4" />
-                    Cổng tra cứu kết quả thi công khai
-                  </h3>
-                  <p className="text-slate-400 text-xs mb-4">
-                    Ban tổ chức đã công bố điểm thi chính thức. Nhập email đăng ký của bạn để xem điểm chi tiết &amp; đáp án.
-                  </p>
+              {/* Zalo community details conditionally visible on homepage */}
+              {(systemSettings.communityImageUrl || systemSettings.communityLink) && (
+                <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-6 rounded-3xl border border-indigo-500/20 text-center shadow-2xl space-y-4">
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                      <span className="text-base">✨</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-100 text-sm">Tham gia cộng đồng học tập</h4>
+                      <p className="text-[10px] text-slate-400 font-sans mt-0.5">Kết nối, trao đổi kinh nghiệm &amp; ôn luyện giải đề.</p>
+                    </div>
+                  </div>
 
-                  <form onSubmit={handleLookupScore} className="space-y-3">
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
-                        <input 
-                          id="lookup-email-input"
-                          type="email"
-                          placeholder="Nhập email đã đăng ký thi..."
-                          value={lookupEmail}
-                          onChange={(e) => setLookupEmail(e.target.value)}
-                          className="w-full bg-[#030712]/50 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 text-xs transition-all"
+                  <div className="space-y-3.5 max-w-sm mx-auto">
+                    <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                      Hãy cùng tham gia nhóm cộng đồng học tập để nhận thông tin kì thi, thảo luận trực tiếp cùng đồng đội và nhận đáp án / bài giải chi tiết.
+                    </p>
+
+                    <div className="flex justify-center gap-1.5 font-mono text-[9px] text-indigo-300">
+                      <span className="bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">🟢 Hoạt động 24/7</span>
+                      <span className="bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">📚 Luyện thi hiệu quả</span>
+                    </div>
+
+                    {systemSettings.communityImageUrl && (
+                      <div className="rounded-xl overflow-hidden border border-white/10 bg-[#030712]/40 flex justify-center items-center p-2 mx-auto/ max-w-[280px] sm:max-w-[320px] shadow-inner mx-auto">
+                        <img 
+                          src={systemSettings.communityImageUrl} 
+                          alt="Cộng đồng" 
+                          className="w-full h-auto object-contain max-h-[300px] rounded-lg"
+                          referrerPolicy="no-referrer"
                         />
                       </div>
-                      <button 
-                        id="btn-lookup-search"
-                        type="submit"
-                        className="bg-indigo-600 hover:bg-indigo-700 hover:border-indigo-500/50 border border-indigo-600 transition-all duration-300 text-white font-semibold px-4 py-2.5 rounded-xl text-xs cursor-pointer flex items-center gap-1.5 shadow-lg shadow-indigo-600/20"
-                      >
-                        Tra cứu
-                      </button>
-                    </div>
-                  </form>
-
-                  <AnimatePresence>
-                    {lookupSearched && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 pt-4 border-t border-white/[0.06] overflow-hidden"
-                      >
-                        {lookupResult ? (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/[0.02] border border-white/10">
-                              <div>
-                                <p className="text-slate-400 text-xs mb-0.5">Thí sinh:</p>
-                                <p className="text-white font-bold text-sm leading-tight">{lookupResult.zaloName}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-indigo-400 text-xs mb-0.5">Điểm tổng:</p>
-                                <p className="text-xl font-bold text-indigo-300 font-mono">{lookupResult.score.toFixed(2)}</p>
-                              </div>
-                            </div>
-
-                            {/* Question Details inside scorecard lookup */}
-                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                              {lookupResult.breakdown.map((item, idx) => (
-                                <div key={idx} className="p-3 bg-white/[0.02] rounded-xl border border-white/[0.06] text-xs space-y-1.5">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="font-bold text-slate-200">Câu số {idx + 1}</span>
-                                    <span className={`px-2 py-0.5 rounded-md font-bold font-mono text-[10px] border ${item.pointsEarned > 0 ? 'bg-emerald-500/[0.08] text-emerald-400 border-emerald-500/20' : 'bg-rose-500/[0.08] text-rose-400 border-rose-500/20'}`}>
-                                      +{item.pointsEarned.toFixed(2)} / {item.maxPoints.toFixed(2)} đ
-                                    </span>
-                                  </div>
-                                  <p className="text-slate-400 font-mono text-[11px] leading-relaxed">
-                                    Bạn trả lời: <span className="text-slate-100">{item.candidateAnswerDetail}</span>
-                                  </p>
-                                  <p className="text-slate-400 font-mono text-[11px] leading-relaxed">
-                                    Đáp án chính thức: <span className="text-emerald-400">{item.correctAnswerDetail}</span>
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 text-slate-500 text-xs bg-white/[0.01] rounded-xl border border-white/[0.06]">
-                            Không tìm thấy kết quả thi với email này. Vui lòng kiểm tra lại!
-                          </div>
-                        )}
-                      </motion.div>
                     )}
-                  </AnimatePresence>
+
+                    {systemSettings.communityLink && (
+                      <a
+                        href={systemSettings.communityLink.startsWith('http') ? systemSettings.communityLink : `https://${systemSettings.communityLink}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 transition-all font-semibold text-slate-100 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs text-center shadow-md cursor-pointer hover:shadow-indigo-500/10 duration-200"
+                      >
+                        Tham gia nhóm ngay
+                        <ChevronRight className="w-4 h-4 text-white" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -821,39 +896,50 @@ export default function CandidateSection({
 
             {/* COMMUNITY LINK & PIC SECTION */}
             {(systemSettings.communityImageUrl || systemSettings.communityLink) && (
-              <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 p-5 rounded-2xl border border-indigo-500/20 text-left space-y-4 shadow-lg">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-                    <span className="text-xs">✨</span>
+              <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-6 rounded-2xl border border-indigo-500/20 text-center shadow-lg space-y-4">
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                    <span className="text-base">✨</span>
                   </div>
                   <div>
                     <h4 className="font-bold text-slate-100 text-sm">Tham gia cộng đồng học tập</h4>
-                    <p className="text-[10px] text-slate-400">Kết nối, trao đổi kinh nghiệm &amp; nhận tài liệu bài giải chi tiết.</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Kết nối, trao đổi kinh nghiệm &amp; ôn luyện giải đề.</p>
                   </div>
                 </div>
 
-                {systemSettings.communityImageUrl && (
-                  <div className="rounded-xl overflow-hidden border border-white/5 max-h-36 max-w-full">
-                    <img 
-                      src={systemSettings.communityImageUrl} 
-                      alt="Cộng đồng" 
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                )}
+                <div className="space-y-3.5 max-w-sm mx-auto">
+                  <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                    Hãy cùng tham gia nhóm cộng đồng học tập để nhận thông tin kì thi mới nhất, thảo luận trực tiếp cùng các thí sinh khác và nhận trợ giúp giải đề chi tiết!
+                  </p>
 
-                {systemSettings.communityLink && (
-                  <a
-                    href={systemSettings.communityLink.startsWith('http') ? systemSettings.communityLink : `https://${systemSettings.communityLink}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 transition-all font-semibold text-slate-100 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs text-center shadow-md cursor-pointer animate-pulse"
-                  >
-                    Tham gia nhóm cộng đồng ngay
-                    <ChevronRight className="w-4 h-4 text-white" />
-                  </a>
-                )}
+                  <div className="flex justify-center gap-1.5 font-mono text-[9px] text-indigo-300">
+                    <span className="bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">🟢 Hoạt động 24/7</span>
+                    <span className="bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">📚 Học tập tích cực</span>
+                  </div>
+
+                  {systemSettings.communityImageUrl && (
+                    <div className="rounded-xl overflow-hidden border border-white/10 bg-[#030712]/40 flex justify-center items-center p-2 mx-auto max-w-[280px] sm:max-w-[320px] shadow-inner">
+                      <img 
+                        src={systemSettings.communityImageUrl} 
+                        alt="Cộng đồng" 
+                        className="w-full h-auto object-contain max-h-[300px] rounded-lg"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  )}
+
+                  {systemSettings.communityLink && (
+                    <a
+                      href={systemSettings.communityLink.startsWith('http') ? systemSettings.communityLink : `https://${systemSettings.communityLink}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 transition-all font-semibold text-slate-100 py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs text-center shadow-md cursor-pointer hover:shadow-indigo-500/10 duration-200"
+                    >
+                      Tham gia nhóm ngay
+                      <ChevronRight className="w-4 h-4 text-white" />
+                    </a>
+                  )}
+                </div>
               </div>
             )}
 
